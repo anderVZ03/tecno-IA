@@ -3,18 +3,11 @@ import requests
 import json
 import pandas as pd
 
-# ---------------------------------------------------------------------
-# 1. LA LÓGICA DE IA (CON PROMPT SIMPLIFICADO)
-# ---------------------------------------------------------------------
-
 # Configuración de la API local
 API_URL = "http://localhost:1234/v1/chat/completions"
 MODEL_ID = "llama-3.2-3b-instruct"
 headers = {"Content-Type": "application/json"}
 
-# --- ¡CAMBIO IMPORTANTE AQUÍ! ---
-# Simplificamos el JSON a un formato "plano" (sin anidar).
-# Esto es MUCHO más fácil de generar para un modelo 3B.
 SYSTEM_PROMPT = """
 Eres un asistente de evaluación académica. Tu tarea es calificar el resumen de un estudiante basándote en un texto original y una rúbrica. Debes ser objetivo y estricto. La rúbrica es la siguiente:
 
@@ -67,9 +60,6 @@ def evaluar_resumen(texto_base, resumen):
         api_respuesta_dict = response.json()
         json_string_respuesta = api_respuesta_dict['choices'][0]['message']['content']
 
-        # El código de "limpieza" sigue siendo útil por si el modelo
-        # añade texto basura al final (ej. ```json ... ```)
-
         start_index = json_string_respuesta.find('{')
         end_index = json_string_respuesta.rfind('}')
 
@@ -80,7 +70,6 @@ def evaluar_resumen(texto_base, resumen):
                 evaluacion_final_dict = json.loads(json_limpio)
                 return evaluacion_final_dict
             except json.JSONDecodeError as e:
-                # Si esto falla, es porque el JSON está malformado por dentro
                 st.error(f"Error al parsear el JSON extraído: {e}")
                 st.subheader("Respuesta Cruda (Original):")
                 st.text(json_string_respuesta)
@@ -98,9 +87,6 @@ def evaluar_resumen(texto_base, resumen):
     except Exception as e:
         return {"error": f"Error en API: {str(e)}"}
 
-# ---------------------------------------------------------------------
-# 2. LA INTERFAZ WEB (Actualizada al formato plano)
-# ---------------------------------------------------------------------
 
 st.title("🤖 Evaluador Automático de Resúmenes")
 st.write("Esta app usa un modelo Llama local (vía LM Studio) para calificar resúmenes.")
@@ -123,14 +109,10 @@ if st.button("Evaluar Resumen"):
         st.subheader("Resultados de la Evaluación")
         
         if "error" in resultado:
-            # El error ya se muestra dentro de la función `evaluar_resumen`
             pass
         else:
             st.success("¡Evaluación completada!")
-            
-            # --- ¡CAMBIO IMPORTANTE AQUÍ! ---
-            # Leemos las claves planas del JSON
-            
+ 
             st.metric(label="Calificación Total", value=f"{resultado.get('calificacion_total', 0)} / 25")
             
             st.subheader("Retroalimentación General")
@@ -138,7 +120,6 @@ if st.button("Evaluar Resumen"):
             
             st.subheader("Calificaciones por Criterio")
             
-            # Creamos la tabla a partir de las claves planas
             criterios_data = [
                 ("Estructura", resultado.get('nota_estructura', 0)),
                 ("Ortografía", resultado.get('nota_ortografia', 0)),
@@ -148,9 +129,7 @@ if st.button("Evaluar Resumen"):
             ]
             df_criterios = pd.DataFrame(criterios_data, columns=['Criterio', 'Nota'])
             st.table(df_criterios)
-            
-            # --- FIN DEL CAMBIO ---
-            
+                        
             with st.expander("Ver respuesta JSON cruda del modelo"):
                 st.json(resultado)
                 

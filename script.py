@@ -1,16 +1,13 @@
 import pandas as pd
 import requests
-import json # Necesario para procesar la respuesta JSON del modelo
+import json 
 
-# ---------------------------------------------------------------------
 # 1. CONFIGURACIÓN DE LA API LOCAL (LM Studio)
-# ---------------------------------------------------------------------
 API_URL = "http://localhost:1234/v1/chat/completions"
-# Asegúrate de que este ID coincida con el que viste en LM Studio
+
 MODEL_ID = "llama-3.2-3b-instruct" 
 headers = {"Content-Type": "application/json"}
 
-# Este es el "cerebro" de la operación.
 # Define las reglas y el formato de salida JSON.
 SYSTEM_PROMPT = """
 Eres un asistente de evaluación académica. Tu tarea es calificar el resumen de un estudiante basándote en un texto original y una rúbrica. Debes ser objetivo y estricto. La rúbrica es la siguiente:
@@ -82,9 +79,7 @@ def evaluar_resumen(texto_base, resumen):
         # El contenido es un STRING que se ve como JSON
         json_string_respuesta = api_respuesta_dict['choices'][0]['message']['content']
 
-        # 5. ¡Paso clave! Convertir ese STRING en un diccionario real de Python
         try:
-            # Usamos json.loads() para "parsear" el string
             evaluacion_final_dict = json.loads(json_string_respuesta)
             return evaluacion_final_dict
         except json.JSONDecodeError as e:
@@ -97,13 +92,10 @@ def evaluar_resumen(texto_base, resumen):
         print("Asegúrate de que LM Studio esté corriendo y el servidor esté iniciado.")
         return {"error": f"Error de conexión: {str(e)}"}
     except Exception as e:
-        # Captura otros errores (ej. 'choices' no existe, etc.)
         print(f"Error inesperado al procesar la respuesta: {e}")
         return {"error": f"Error en API: {str(e)}"}
 
-# ---------------------------------------------------------------------
-# 2. LEER EL EXCEL (Esta lógica de tu amigo era perfecta)
-# ---------------------------------------------------------------------
+# 2. LEER EL EXCEL
 try:
     textos_base = pd.read_excel("resúmenes.xlsx", sheet_name="Textos Base")
     resúmenes = pd.read_excel("resúmenes.xlsx", sheet_name="Resúmenes")
@@ -115,14 +107,11 @@ except Exception as e:
     print(f"Error al leer el Excel: {e}")
     exit()
 
-# ---------------------------------------------------------------------
 # 3. EVALUAR CADA RESUMEN
-# ---------------------------------------------------------------------
 resultados = []
 print("Iniciando evaluación de resúmenes...")
 for _, resumen_row in resúmenes.iterrows():
     
-    # Validaciones (de la lógica de tu amigo)
     if pd.isna(resumen_row["ID"]):
         print(f"Advertencia: El resumen de {resumen_row['Autor']} no tiene un ID válido. Omitiendo.")
         continue
@@ -134,14 +123,12 @@ for _, resumen_row in resúmenes.iterrows():
         print(f"Error: No se encontró el texto base para el ID {id_texto} (Autor: {resumen_row['Autor']}). Omitiendo.")
         continue
 
-    # Obtenemos los datos para la API
     texto_base = texto_base_filtrado["Texto Base"].values[0]
     resumen_actual = resumen_row["Resumen"]
     autor = resumen_row["Autor"]
     
     print(f"  > Evaluando a: {autor} (ID: {id_texto})...")
     
-    # Llamamos a nuestra nueva función
     evaluacion_dict = evaluar_resumen(texto_base, resumen_actual)
 
     # Preparamos la fila para el DataFrame de resultados
@@ -172,9 +159,7 @@ for _, resumen_row in resúmenes.iterrows():
 
     resultados.append(fila_resultado)
 
-# ---------------------------------------------------------------------
 # 4. GUARDAR RESULTADOS EN UN NUEVO EXCEL
-# ---------------------------------------------------------------------
 df_resultados = pd.DataFrame(resultados)
 try:
     df_resultados.to_excel("resultados_evaluacion.xlsx", index=False)
